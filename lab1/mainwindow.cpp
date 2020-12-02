@@ -1,7 +1,10 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "sha.h"
 #include <cstring>
+
+extern "C" {
+#include "sha.h"
+}
 
 using namespace std;
 

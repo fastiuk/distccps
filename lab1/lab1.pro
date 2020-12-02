@@ -11,7 +11,7 @@ CONFIG += c++11
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
-    sha.cpp
+    sha.c
 
 HEADERS += \
     mainwindow.h \
