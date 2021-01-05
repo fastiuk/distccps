@@ -10,13 +10,24 @@ CONFIG += c++11
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    dsa.c \
+    sha.c
 
 HEADERS += \
-    mainwindow.h
+    mainwindow.h \
+    dsa.h \
+    sha.h
 
 FORMS += \
     mainwindow.ui
+
+INCLUDEPATH += \
+   /usr/local/include
+
+LIBS += \
+   /usr/local/lib/libgmp.a
+
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
