@@ -21,12 +21,17 @@ MainWindow::MainWindow(QWidget *parent)
         printf("DSA self test successful\n");
     }
 
-    dsa_init(&par, &kp, &sign);
+    dsa_init();
     dsa_generate_param(&par);
     dsa_generate_keypair(&par, &kp);
     dsa_sign(&par, &kp, "Hello", 5, &sign);
-    dsa_validate(&par, &kp, "Hello", 5, &sign);
-    dsa_destroy(&par, &kp, &sign);
+    if (dsa_validate(&par, &kp, "Hello", 5, &sign)) {
+        printf("DSA signature invalid\n");
+    } else {
+        printf("DSA signature is valid\n");
+    }
+
+    dsa_destroy();
 }
 
 MainWindow::~MainWindow()
