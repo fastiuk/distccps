@@ -1,5 +1,8 @@
+#include "dsa.h"
+
 #include <fcntl.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <gmp.h>
 
@@ -11,27 +14,28 @@
 typedef unsigned int uint;
 
 static gmp_randstate_t state;
+static int state_init;
 
-void print_num_base(const char *msg, mpz_t num, uint base)
+static void print_num_base(const char *msg, mpz_t num, uint base)
 {
     printf("%s(%zu bits) = ", msg, mpz_sizeinbase(num, 2));
     mpz_out_str(stdout, base, num);
     printf("\n");
 }
 
-void print_num(const char *msg, mpz_t num)
+static void print_num(const char *msg, mpz_t num)
 {
-    print_num_base(msg, num, 10);
+    print_num_base(msg, num, 16);
 }
 
-void gen_q(mpz_t q)
+static void gen_q(mpz_t q)
 {
     mpz_urandomb(q, state, SIZE_Q);
     mpz_setbit(q, SIZE_Q - 1);
     mpz_nextprime(q, q);
 }
 
-void gen_p(mpz_t p, mpz_t q)
+static void gen_p(mpz_t p, mpz_t q)
 {
     mpz_t tmp;
 
@@ -57,7 +61,7 @@ void gen_p(mpz_t p, mpz_t q)
     mpz_clear(tmp);
 }
 
-void gen_g(mpz_t g, mpz_t p, mpz_t q)
+static void gen_g(mpz_t g, mpz_t p, mpz_t q)
 {
     mpz_t dv, p1;
 
@@ -77,31 +81,32 @@ void gen_g(mpz_t g, mpz_t p, mpz_t q)
     mpz_clear(p1);
 }
 
-void gen_x(mpz_t x, mpz_t q)
+static void gen_x(mpz_t x, mpz_t q)
 {
     // 1 <= x <= q - 1
     mpz_urandomm(x, state, q);
 }
 
-void gen_y(mpz_t y, mpz_t g, mpz_t x, mpz_t p)
+static void gen_y(mpz_t y, mpz_t g, mpz_t x, mpz_t p)
 {
     mpz_powm(y, g, x, p);
 }
 
-void gen_k(mpz_t k, mpz_t q)
+static void gen_k(mpz_t k, mpz_t q)
 {
     // 1 <= k <= q - 1
     mpz_urandomm(k, state, q);
 }
 
-void gen_r(mpz_t r, mpz_t g, mpz_t k, mpz_t p, mpz_t q)
+static void gen_r(mpz_t r, mpz_t g, mpz_t k, mpz_t p, mpz_t q)
 {
     mpz_powm(r, g, k, p);
     mpz_mod(r, r, q);
     // If r == 0 - start again with another k
 }
 
-void gen_s(mpz_t s, mpz_t k, mpz_t x, mpz_t r, mpz_t q, uint8_t *msg, size_t size)
+static void gen_s(mpz_t s, mpz_t k, mpz_t x, mpz_t r, mpz_t q, uint8_t *msg,
+                  size_t size)
 {
     uint8_t sha_bytes[20];
     mpz_t sha;
@@ -124,12 +129,12 @@ void gen_s(mpz_t s, mpz_t k, mpz_t x, mpz_t r, mpz_t q, uint8_t *msg, size_t siz
     mpz_clear(tmp);
 }
 
-void gen_w(mpz_t w, mpz_t s, mpz_t q)
+static void gen_w(mpz_t w, mpz_t s, mpz_t q)
 {
     mpz_invert(w, s, q);
 }
 
-void gen_u1(mpz_t u1, mpz_t w, mpz_t q, uint8_t *msg, size_t size)
+static void gen_u1(mpz_t u1, mpz_t w, mpz_t q, uint8_t *msg, size_t size)
 {
     uint8_t sha_bytes[20];
     mpz_t sha;
@@ -145,13 +150,13 @@ void gen_u1(mpz_t u1, mpz_t w, mpz_t q, uint8_t *msg, size_t size)
     mpz_clear(sha);
 }
 
-void gen_u2(mpz_t u2, mpz_t r, mpz_t w, mpz_t q)
+static void gen_u2(mpz_t u2, mpz_t r, mpz_t w, mpz_t q)
 {
     mpz_mul(u2, r, w);
     mpz_mod(u2, u2, q);
 }
 
-void gen_v(mpz_t v, mpz_t g, mpz_t u1, mpz_t y, mpz_t u2, mpz_t p, mpz_t q)
+static void gen_v(mpz_t v, mpz_t g, mpz_t u1, mpz_t y, mpz_t u2, mpz_t p, mpz_t q)
 {
     mpz_t tmp;
 
@@ -166,12 +171,250 @@ void gen_v(mpz_t v, mpz_t g, mpz_t u1, mpz_t y, mpz_t u2, mpz_t p, mpz_t q)
     mpz_clear(tmp);
 }
 
-int dsa_test(void)
+static void dsa_mpz_import(const uint8_t *data, mpz_t num)
 {
-    mpz_t g, p, p1, q, x, y, k, r, s, w, u1, u2, v;
+    mpz_init_set_str(num, data, 16);
+}
+
+static void dsa_mpz_export(const mpz_t num, uint8_t *data, size_t data_size)
+{
+    void (*freefunc)(void *, size_t);
+    char *tmp_str;
+    size_t len;
+
+    if (!data || !data_size) {
+        return;
+    }
+
+    tmp_str = mpz_get_str(NULL, 16, num);
+    len = strlen(tmp_str) + 1;
+    if (data_size < len) {
+        return;
+    }
+
+    memcpy(data, tmp_str, len);
+
+    mp_get_memory_functions(NULL, NULL, &freefunc);
+    freefunc(tmp_str, len);
+}
+
+int dsa_init(dsa_param_t *param, dsa_keypair_t *keypair,
+             dsa_signature_t *signature)
+{
     uint seed;
-    uint8_t sha[20];
     int fd;
+
+    if (!state_init) {
+        fd = open("/dev/urandom", O_RDONLY);
+        read(fd, &seed, sizeof(seed));
+        close(fd);
+
+        gmp_randinit_mt(state);
+        gmp_randseed_ui(state, seed);
+
+        state_init = 1;
+    }
+
+    return 0;
+}
+
+int dsa_generate_param(dsa_param_t *param)
+{
+    mpz_t q, p, g;
+
+    mpz_init(q);
+    mpz_init(p);
+    mpz_init(g);
+
+    gen_q(q);
+    print_num("q - ", q);
+
+    gen_p(p, q);
+    print_num("P - ", p);
+
+    gen_g(g, p, q);
+    print_num("G - ", g);
+
+    dsa_mpz_export(q, param->q, sizeof(param->q));
+    dsa_mpz_export(p, param->p, sizeof(param->p));
+    dsa_mpz_export(g, param->g, sizeof(param->g));
+
+    mpz_clear(q);
+    mpz_clear(p);
+    mpz_clear(g);
+
+    return 0;
+}
+
+int dsa_generate_keypair(const dsa_param_t *param, dsa_keypair_t *keypair)
+{
+    mpz_t g, p, q, x, y;
+
+    mpz_init(q);
+    mpz_init(p);
+    mpz_init(g);
+
+    mpz_init(x);
+    mpz_init(y);
+
+    dsa_mpz_import(param->q, q);
+    dsa_mpz_import(param->p, p);
+    dsa_mpz_import(param->g, g);
+
+    gen_x(x, q);
+    print_num("x - ", x);
+
+    gen_y(y, g, x, p);
+    print_num("y - ", y);
+
+    dsa_mpz_export(x, keypair->x, sizeof(keypair->x));
+    dsa_mpz_export(y, keypair->y, sizeof(keypair->y));
+
+    mpz_clear(q);
+    mpz_clear(p);
+    mpz_clear(g);
+
+    mpz_clear(x);
+    mpz_clear(y);
+
+    return 0;
+}
+
+int dsa_sign(const dsa_param_t *param, const dsa_keypair_t *keypair,
+             const char *msg, size_t msg_size, dsa_signature_t *signature)
+{
+    mpz_t g, p, q, x, y, k, r, s;
+
+    mpz_init(q);
+    mpz_init(p);
+    mpz_init(g);
+
+    mpz_init(x);
+    mpz_init(y);
+
+    mpz_init(k);
+    mpz_init(r);
+    mpz_init(s);
+
+    dsa_mpz_import(param->q, q);
+    dsa_mpz_import(param->p, p);
+    dsa_mpz_import(param->g, g);
+
+    dsa_mpz_import(keypair->x, x);
+    dsa_mpz_import(keypair->y, y);
+
+    gen_k(k, q);
+    print_num("k - ", k);
+
+    gen_r(r, g, k, p, q);
+    print_num("r - ", r);
+
+    gen_s(s, k, x, r, q, msg, msg_size);
+    print_num("s - ", s);
+
+    dsa_mpz_export(r, signature->r, sizeof(signature->r));
+    dsa_mpz_export(s, signature->s, sizeof(signature->s));
+
+    mpz_clear(q);
+    mpz_clear(p);
+    mpz_clear(g);
+
+    mpz_clear(x);
+    mpz_clear(y);
+
+    mpz_clear(k);
+    mpz_clear(r);
+    mpz_clear(s);
+
+    return 0;
+}
+
+int dsa_validate(const dsa_param_t *param, const dsa_keypair_t *keypair,
+                 const char *msg, size_t msg_size,
+                 const dsa_signature_t *signature)
+{
+    mpz_t g, p, q, x, y, k, r, s, w, u1, u2, v;
+
+    mpz_init(q);
+    mpz_init(p);
+    mpz_init(g);
+
+    mpz_init(x);
+    mpz_init(y);
+
+    mpz_init(k);
+    mpz_init(r);
+    mpz_init(s);
+
+    mpz_init(w);
+    mpz_init(u1);
+    mpz_init(u2);
+    mpz_init(v);
+
+    dsa_mpz_import(param->q, q);
+    dsa_mpz_import(param->p, p);
+    dsa_mpz_import(param->g, g);
+
+    dsa_mpz_import(keypair->x, x);
+    dsa_mpz_import(keypair->y, y);
+
+    dsa_mpz_import(signature->r, r);
+    dsa_mpz_import(signature->s, s);
+
+    gen_w(w, s, q);
+    print_num("w - ", w);
+
+    gen_u1(u1, w, q, msg, msg_size);
+    print_num("u1 - ", u1);
+
+    gen_u2(u2, r, w, q);
+    print_num("u2 - ", u2);
+
+    gen_v(v, g, u1, y, u2, p, q);
+    print_num("v - ", v);
+
+    if (mpz_cmp(r, v) == 0) {
+        printf("Signature is valid\n");
+    } else {
+        printf("Signature invalid\n");
+    }
+
+    mpz_clear(q);
+    mpz_clear(p);
+    mpz_clear(g);
+
+    mpz_clear(x);
+    mpz_clear(y);
+
+    mpz_clear(k);
+    mpz_clear(r);
+    mpz_clear(s);
+
+    mpz_clear(w);
+    mpz_clear(u1);
+    mpz_clear(u2);
+    mpz_clear(v);
+
+    return 0;
+}
+
+int dsa_destroy(dsa_param_t *param, dsa_keypair_t *keypair,
+                dsa_signature_t *signature)
+{
+    if (state_init) {
+        gmp_randclear(state);
+    }
+
+    return 0;
+}
+
+/* Debug functionality */
+int dsa_self_test(void)
+{
+    mpz_t g, p, q, x, y, k, r, s, w, u1, u2, v;
+    uint seed;
+    int fd;
+    int ret = 0;
 
     fd = open("/dev/urandom", O_RDONLY);
     read(fd, &seed, sizeof(seed));
@@ -186,8 +429,8 @@ int dsa_test(void)
 
     mpz_init(x);
     mpz_init(y);
-    mpz_init(k);
 
+    mpz_init(k);
     mpz_init(r);
     mpz_init(s);
 
@@ -195,7 +438,7 @@ int dsa_test(void)
     mpz_init(u1);
     mpz_init(u2);
     mpz_init(v);
-    
+
     gen_q(q);
     print_num("q - ", q);
 
@@ -222,20 +465,18 @@ int dsa_test(void)
 
     gen_w(w, s, q);
     print_num("w - ", w);
-    
+
     gen_u1(u1, w, q, "Hello", 5);
     print_num("u1 - ", u1);
-    
+
     gen_u2(u2, r, w, q);
     print_num("u2 - ", u2);
-    
+
     gen_v(v, g, u1, y, u2, p, q);
     print_num("v - ", v);
 
-    if (mpz_cmp(r, v) == 0) {
-        printf("Signature is valid\n");
-    } else {
-        printf("Signature invalid\n");
+    if (mpz_cmp(r, v) != 0) {
+        ret = -1;
     }
 
     gmp_randclear(state);
@@ -246,8 +487,8 @@ int dsa_test(void)
 
     mpz_clear(x);
     mpz_clear(y);
-    mpz_clear(k);
 
+    mpz_clear(k);
     mpz_clear(r);
     mpz_clear(s);
 
@@ -256,5 +497,5 @@ int dsa_test(void)
     mpz_clear(u2);
     mpz_clear(v);
 
-    return 0;
+    return ret;
 }
