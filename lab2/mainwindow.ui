@@ -7,14 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>521</width>
-    <height>713</height>
+    <height>632</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>DSA Signature</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QTextEdit" name="textEdit">
+   <widget class="QTextEdit" name="textEdit_param_p">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -24,11 +24,11 @@
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton">
+   <widget class="QPushButton" name="pushButton_generate_params">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>660</y>
+      <y>580</y>
       <width>151</width>
       <height>24</height>
      </rect>
@@ -37,11 +37,11 @@
      <string>Generate parameters</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_2">
+   <widget class="QPushButton" name="pushButton_sign">
     <property name="geometry">
      <rect>
       <x>170</x>
-      <y>660</y>
+      <y>580</y>
       <width>80</width>
       <height>24</height>
      </rect>
@@ -50,11 +50,11 @@
      <string>Sign</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_3">
+   <widget class="QPushButton" name="pushButton_validate">
     <property name="geometry">
      <rect>
       <x>260</x>
-      <y>660</y>
+      <y>580</y>
       <width>80</width>
       <height>24</height>
      </rect>
@@ -89,7 +89,7 @@
      <string>Parameter q</string>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEdit_2">
+   <widget class="QTextEdit" name="textEdit_param_q">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -112,7 +112,7 @@
      <string>Parameter g</string>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEdit_3">
+   <widget class="QTextEdit" name="textEdit_param_g">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -122,7 +122,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEdit_4">
+   <widget class="QTextEdit" name="textEdit_priv_key">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -137,7 +137,7 @@
      <rect>
       <x>10</x>
       <y>230</y>
-      <width>81</width>
+      <width>91</width>
       <height>16</height>
      </rect>
     </property>
@@ -150,7 +150,7 @@
      <rect>
       <x>10</x>
       <y>290</y>
-      <width>81</width>
+      <width>91</width>
       <height>16</height>
      </rect>
     </property>
@@ -158,7 +158,7 @@
      <string>Public key</string>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEdit_5">
+   <widget class="QTextEdit" name="textEdit_publ_key">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -181,7 +181,7 @@
      <string>Message</string>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEdit_6">
+   <widget class="QTextEdit" name="textEdit_msg">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -204,7 +204,7 @@
      <string>Parameter r</string>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEdit_7">
+   <widget class="QTextEdit" name="textEdit_param_r">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -214,20 +214,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QLabel" name="label_9">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>600</y>
-      <width>81</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Validation</string>
-    </property>
-   </widget>
-   <widget class="QTextEdit" name="textEdit_8">
+   <widget class="QTextEdit" name="textEdit_signature">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -276,19 +263,6 @@
      <enum>Qt::Horizontal</enum>
     </property>
    </widget>
-   <widget class="Line" name="line_4">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>580</y>
-      <width>501</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
-    </property>
-   </widget>
    <widget class="QLabel" name="label_8">
     <property name="geometry">
      <rect>
@@ -302,21 +276,11 @@
      <string>Signature</string>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEdit_9">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>620</y>
-      <width>501</width>
-      <height>31</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_10">
+   <widget class="QLabel" name="label_validation_result">
     <property name="geometry">
      <rect>
       <x>360</x>
-      <y>660</y>
+      <y>580</y>
       <width>151</width>
       <height>21</height>
      </rect>
