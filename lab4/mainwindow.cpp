@@ -252,22 +252,39 @@ void MainWindow::on_pushButton_decr_clicked()
 
 void MainWindow::on_pushButton_validate_clicked()
 {
-//    // Encrypt signature
-//    text_to_data(ui->textEdit_u1_pr_key->toPlainText().toStdString().c_str(),
-//                 ui->textEdit_u1_pr_key->toPlainText().toStdString().length(),
-//                 hex_u1_pr, sizeof(hex_u1_pr));
-//    cesar_asym_encrypt(hex_u1_pr, sizeof(hex_u1_pr), signature,
-//                       sizeof(signature));
-//    data_to_text(signature, sizeof(signature), key_text, sizeof(key_text));
-//    ui->textEdit_dig_sign->setText((QString::fromStdString(string(key_text))));
+    uint8_t hex_u1_pub[KEY_SIZE];
+    char *msg;
+    char *text;
+    size_t msg_size;
+    size_t text_size;
+    uint8_t signature[SIGN_SIZE];
+    uint8_t signature2[SIGN_SIZE];
 
-//    // Decrypt session
-//    text_to_data(ui->textEdit_sess_key->toPlainText().toStdString().c_str(),
-//                 ui->textEdit_sess_key->toPlainText().toStdString().length(),
-//                 key_session, sizeof(key_session));
-//    text_to_data(ui->textEdit_u2_pub_key->toPlainText().toStdString().c_str(),
-//                 ui->textEdit_u2_pub_key->toPlainText().toStdString().length(),
-//                 hex_u2_pub, sizeof(hex_u2_pub));
-//    cesar_asym_decrypt(hex_u2_pub, sizeof(hex_u2_pub), key_session,
-//                        sizeof(key_session));
+    // Get message
+    msg_size = ui->textEdit_u2_msg->toPlainText().toStdString().length();
+    text_size = (msg_size + 8) * 2 + 1;
+    msg = (char *)calloc(msg_size + 8, 1);
+    text = (char *)calloc(text_size, 1);
+    memcpy(msg, ui->textEdit_u2_msg->toPlainText().toStdString().c_str(),
+           msg_size);
+
+    sha1_calculate(msg, msg_size, signature2, sizeof(signature2));
+
+    // Decrypt signature
+    text_to_data(ui->textEdit_dig_sign->toPlainText().toStdString().c_str(),
+                 ui->textEdit_dig_sign->toPlainText().toStdString().length(),
+                 signature, sizeof(signature));
+    text_to_data(ui->textEdit_u1_pub_key->toPlainText().toStdString().c_str(),
+                 ui->textEdit_u1_pub_key->toPlainText().toStdString().length(),
+                 hex_u1_pub, sizeof(hex_u1_pub));
+    cesar_asym_decrypt(hex_u1_pub, sizeof(hex_u1_pub), signature,
+                       sizeof(signature));
+
+    if (memcmp(signature, signature2, SIGN_SIZE) != 0) {
+        ui->label_validation_result->setText(
+                       QString::fromStdString(string("Evenlope invalid")));
+    } else {
+        ui->label_validation_result->setText(
+                       QString::fromStdString(string("Evenlope is valid")));
+    }
 }
