@@ -9,12 +9,14 @@ CONFIG += c++11
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    cesar.c \
     main.cpp \
     mainwindow.cpp \
     cast128.c \
     sha.c
 
 HEADERS += \
+    cesar.h \
     mainwindow.h \
     cast128.h \
     cast128_sboxes.h \
